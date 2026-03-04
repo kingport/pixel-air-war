@@ -5,10 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>像素空战 - Pixel Air War</title>
   <style>
-    @font-face {
-      font-family: 'PixelFont';
-      src: url('data:font/woff2;charset=utf-8;base64,') format('woff2');
-    }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       background: #0a0a1a;
@@ -19,142 +15,201 @@
       overflow: hidden;
       font-family: monospace;
       image-rendering: pixelated;
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
     #gameContainer {
       position: relative;
       border: 3px solid #333;
       box-shadow: 0 0 30px rgba(0, 150, 255, 0.3);
     }
-    canvas {
-      display: block;
-      image-rendering: pixelated;
-      image-rendering: crisp-edges;
-    }
+    canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
     #uiOverlay {
-      position: absolute;
-      top: 0; left: 0;
+      position: absolute; top: 0; left: 0;
       width: 100%; height: 100%;
-      pointer-events: none;
-      z-index: 10;
+      pointer-events: none; z-index: 10;
     }
     #uiOverlay.active { pointer-events: auto; }
-    .screen-overlay {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      background: rgba(0,0,0,0.85);
-      color: #fff;
-      font-family: monospace;
-      text-align: center;
+
+    .screen {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      background: rgba(0,0,0,0.88); color: #fff; font-family: monospace; text-align: center;
     }
-    .screen-overlay h1 {
-      font-size: 36px;
-      color: #00e5ff;
-      text-shadow: 0 0 10px #00e5ff, 2px 2px 0 #005f6b;
-      margin-bottom: 20px;
-      letter-spacing: 4px;
-    }
-    .screen-overlay h2 {
-      font-size: 22px;
-      color: #ff6b35;
-      margin-bottom: 10px;
-    }
-    .screen-overlay p {
-      font-size: 14px;
-      color: #aaa;
-      margin: 5px 0;
-    }
+    .screen.hidden { display: none !important; }
+
+    .screen h1 { font-size: 32px; color: #00e5ff; text-shadow: 0 0 10px #00e5ff, 2px 2px 0 #005f6b; margin-bottom: 10px; letter-spacing: 4px; }
+    .screen h2 { font-size: 20px; color: #ff6b35; margin-bottom: 8px; }
+    .screen h3 { font-size: 16px; color: #aaa; margin-bottom: 15px; }
+    .screen p { font-size: 13px; color: #aaa; margin: 4px 0; }
+
     .btn {
-      pointer-events: auto;
-      margin-top: 20px;
-      padding: 12px 40px;
-      font-size: 18px;
-      font-family: monospace;
-      background: linear-gradient(180deg, #00e5ff, #0088aa);
-      color: #000;
-      border: 2px solid #00e5ff;
-      cursor: pointer;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      transition: all 0.15s;
-      image-rendering: pixelated;
+      pointer-events: auto; margin-top: 10px; padding: 10px 32px; font-size: 16px;
+      font-family: monospace; background: linear-gradient(180deg, #00e5ff, #0088aa);
+      color: #000; border: 2px solid #00e5ff; cursor: pointer; letter-spacing: 2px;
+      text-transform: uppercase; transition: all 0.15s;
     }
-    .btn:hover {
-      background: linear-gradient(180deg, #33ffff, #00bbdd);
-      box-shadow: 0 0 15px rgba(0, 229, 255, 0.6);
-      transform: scale(1.05);
+    .btn:hover { background: linear-gradient(180deg, #33ffff, #00bbdd); box-shadow: 0 0 15px rgba(0, 229, 255, 0.6); transform: scale(1.05); }
+    .btn:active { transform: scale(0.95); }
+    .btn-danger { background: linear-gradient(180deg, #ff4444, #cc0000); border-color: #ff4444; color: #fff; }
+    .btn-danger:hover { background: linear-gradient(180deg, #ff6666, #ff4444); box-shadow: 0 0 15px rgba(255, 68, 68, 0.6); }
+    .btn-gold { background: linear-gradient(180deg, #ffd700, #cc9900); border-color: #ffd700; color: #000; }
+    .btn-gold:hover { background: linear-gradient(180deg, #ffee44, #ffd700); box-shadow: 0 0 15px rgba(255, 215, 0, 0.6); }
+    .btn-sm { padding: 6px 18px; font-size: 12px; margin-top: 6px; }
+    .btn-disabled { opacity: 0.4; pointer-events: none; }
+
+    .level-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; padding: 0 20px; width: 100%; }
+    .level-card {
+      pointer-events: auto; background: rgba(255,255,255,0.06); border: 2px solid #333;
+      padding: 12px 8px; cursor: pointer; text-align: center; transition: all 0.15s; position: relative;
     }
-    .btn-revive {
-      background: linear-gradient(180deg, #ff6b35, #cc4400);
-      border-color: #ff6b35;
-      color: #fff;
+    .level-card:hover { border-color: #00e5ff; background: rgba(0, 229, 255, 0.08); }
+    .level-card.locked { opacity: 0.4; pointer-events: none; }
+    .level-card .level-num { font-size: 11px; color: #666; }
+    .level-card .level-name { font-size: 14px; color: #00e5ff; margin: 4px 0; }
+    .level-card .level-theme { font-size: 11px; color: #888; }
+    .level-card .level-stars { font-size: 14px; color: #ffd700; margin-top: 4px; }
+    .level-card .lock-icon { font-size: 20px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+    .diff-row { display: flex; gap: 8px; margin: 8px 0; }
+    .diff-btn {
+      pointer-events: auto; padding: 10px 16px; font-size: 13px; font-family: monospace;
+      border: 2px solid #444; background: rgba(255,255,255,0.05); color: #ccc; cursor: pointer; transition: all 0.15s; flex: 1;
     }
-    .btn-revive:hover {
-      background: linear-gradient(180deg, #ff8855, #ff6b35);
-      box-shadow: 0 0 15px rgba(255, 107, 53, 0.6);
+    .diff-btn:hover { border-color: #00e5ff; color: #00e5ff; }
+    .diff-btn.selected { border-color: #00e5ff; background: rgba(0,229,255,0.15); color: #00e5ff; }
+
+    .upgrade-list { width: 85%; max-height: 280px; overflow-y: auto; margin: 8px 0; }
+    .upgrade-item {
+      pointer-events: auto; display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 12px; margin: 4px 0; background: rgba(255,255,255,0.05);
+      border: 1px solid #333; font-size: 12px;
     }
-    .score-display {
-      font-size: 24px;
-      color: #ffd700;
-      margin: 10px 0;
+    .upgrade-item .up-name { color: #00e5ff; flex: 1; text-align: left; }
+    .upgrade-item .up-level { color: #ffd700; margin: 0 8px; }
+    .upgrade-item .up-cost { color: #aaa; margin-right: 8px; }
+    .gold-display { font-size: 16px; color: #ffd700; margin: 8px 0; }
+
+    .result-row { display: flex; justify-content: space-between; width: 70%; margin: 3px 0; font-size: 13px; }
+    .result-row .label { color: #aaa; }
+    .result-row .value { color: #fff; }
+    .rating { font-size: 48px; margin: 8px 0; }
+    .rating-s { color: #ffd700; text-shadow: 0 0 20px #ffd700; }
+    .rating-a { color: #00e5ff; text-shadow: 0 0 15px #00e5ff; }
+    .rating-b { color: #4caf50; }
+    .rating-c { color: #aaa; }
+
+    .revive-panel h2 { color: #ff4444; font-size: 24px; margin-bottom: 10px; }
+    .btn-row { display: flex; gap: 10px; margin-top: 10px; }
+
+    #touchControls {
+      position: absolute; bottom: 12px; left: 0; width: 100%; z-index: 15;
+      display: flex; justify-content: space-between; padding: 0 15px; pointer-events: none;
     }
-    .controls-info {
-      margin-top: 20px;
-      font-size: 12px;
-      color: #666;
-      line-height: 1.8;
+    .touch-btn {
+      pointer-events: auto; width: 50px; height: 50px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; border: 2px solid rgba(255,255,255,0.3); cursor: pointer;
+      background: rgba(0,0,0,0.4); color: #fff; transition: all 0.1s;
     }
-    .revive-panel {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      background: rgba(0,0,0,0.8);
-    }
-    .revive-panel h2 { color: #ff4444; font-size: 28px; margin-bottom: 15px; font-family: monospace; }
-    .revive-panel p { color: #ccc; font-size: 14px; margin-bottom: 5px; font-family: monospace; }
-    .revive-buttons { display: flex; gap: 15px; margin-top: 15px; }
-    .hidden { display: none !important; }
+    .touch-btn:active { background: rgba(255,255,255,0.2); transform: scale(0.9); }
+    .touch-btn.on-cooldown { opacity: 0.3; }
+    #touchControls.hidden { display: none; }
   </style>
 </head>
 <body>
   <div id="gameContainer">
     <canvas id="gameCanvas"></canvas>
     <div id="uiOverlay" class="active">
-      <div id="startScreen" class="screen-overlay">
+
+      <div id="menuScreen" class="screen">
         <h1>⚡ 像素空战 ⚡</h1>
         <h2>PIXEL AIR WAR</h2>
-        <p>消灭敌机 · 挑战Boss · 争夺高分</p>
-        <button class="btn" id="startBtn">开始游戏</button>
-        <div class="controls-info">
-          <p>🖱️ 鼠标/触摸 移动战机</p>
-          <p>🔫 自动射击</p>
-          <p>💣 空格键 释放炸弹</p>
+        <p>竖版闯关射击 · 爽快弹幕 · 成长养成</p>
+        <button class="btn" id="btnStory">闯关模式</button>
+        <button class="btn btn-sm" id="btnEndless" style="opacity:0.5">挑战模式 (即将开放)</button>
+        <div style="margin-top:15px; font-size:11px; color:#555; line-height:1.8">
+          <p>🖱️ 鼠标/触摸 控制战机</p>
+          <p>🔫 自动射击 · 💣 空格/按钮 炸弹</p>
+          <p>⚡ E键/按钮 技能</p>
         </div>
       </div>
-      <div id="deathScreen" class="revive-panel hidden">
-        <h2>💥 战机被击落！</h2>
+
+      <div id="levelSelectScreen" class="screen hidden">
+        <h2>选择关卡</h2>
+        <div class="level-grid" id="levelGrid"></div>
+        <button class="btn btn-sm" id="btnBackMenu">返回</button>
+      </div>
+
+      <div id="difficultyScreen" class="screen hidden">
+        <h2 id="diffLevelName">第一关</h2>
+        <h3>选择难度</h3>
+        <div class="diff-row">
+          <div class="diff-btn selected" data-diff="0">普通<br><span style="font-size:10px;color:#4caf50">推荐</span></div>
+          <div class="diff-btn" data-diff="1">困难<br><span style="font-size:10px;color:#ff9800">x1.5</span></div>
+          <div class="diff-btn" data-diff="2">地狱<br><span style="font-size:10px;color:#f44336">x2.0</span></div>
+        </div>
+        <button class="btn btn-gold" id="btnUpgrade">强化战机</button>
+        <button class="btn" id="btnStartLevel">出击！</button>
+        <button class="btn btn-sm" id="btnBackLevels">返回</button>
+      </div>
+
+      <div id="upgradeScreen" class="screen hidden">
+        <h2>战机强化</h2>
+        <div class="gold-display" id="upgradeGold">💰 0</div>
+        <div class="upgrade-list" id="upgradeList"></div>
+        <button class="btn btn-sm" id="btnBackDiff">返回</button>
+      </div>
+
+      <div id="levelIntroScreen" class="screen hidden" style="background:rgba(0,0,0,0.95)">
+        <h3 id="introLevelNum" style="color:#666"></h3>
+        <h1 id="introLevelName"></h1>
+        <p id="introLevelTheme" style="color:#ff6b35"></p>
+      </div>
+
+      <div id="deathScreen" class="screen hidden">
+        <h2 style="color:#ff4444;font-size:24px">💥 战机被击落！</h2>
         <p>当前得分: <span id="deathScore">0</span></p>
         <p id="reviveCount">剩余复活次数: 3</p>
-        <div class="revive-buttons">
-          <button class="btn btn-revive" id="reviveBtn">原地复活</button>
-          <button class="btn" id="gameOverBtn">结束游戏</button>
+        <div class="btn-row">
+          <button class="btn btn-danger" id="btnRevive">原地复活</button>
+          <button class="btn" id="btnGiveUp">结束</button>
         </div>
       </div>
-      <div id="gameOverScreen" class="screen-overlay hidden">
+
+      <div id="levelCompleteScreen" class="screen hidden">
+        <h2 style="color:#4caf50">🎉 关卡完成！</h2>
+        <div class="rating" id="ratingDisplay">S</div>
+        <div style="width:75%">
+          <div class="result-row"><span class="label">通关时间</span><span class="value" id="resultTime">0s</span></div>
+          <div class="result-row"><span class="label">受伤次数</span><span class="value" id="resultHits">0</span></div>
+          <div class="result-row"><span class="label">最大连击</span><span class="value" id="resultCombo">0</span></div>
+          <div class="result-row"><span class="label">击杀数</span><span class="value" id="resultKills">0</span></div>
+          <div class="result-row" style="margin-top:8px;font-size:15px"><span class="label" style="color:#ffd700">金币奖励</span><span class="value" style="color:#ffd700" id="resultGold">+0</span></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="btnNextLevel">下一关</button>
+          <button class="btn btn-sm" id="btnBackToMenu">返回</button>
+        </div>
+      </div>
+
+      <div id="gameOverScreen" class="screen hidden">
         <h1>GAME OVER</h1>
-        <div class="score-display">最终得分: <span id="finalScore">0</span></div>
+        <p style="font-size:18px;color:#ffd700;margin:10px 0">最终得分: <span id="finalScore">0</span></p>
         <p>击杀敌机: <span id="killCount">0</span></p>
         <p>击杀Boss: <span id="bossKillCount">0</span></p>
-        <button class="btn" id="restartBtn">再来一局</button>
+        <p style="color:#ffd700;margin-top:8px">获得金币: <span id="earnedGold">0</span></p>
+        <button class="btn" id="btnRestart">再来一局</button>
+        <button class="btn btn-sm" id="btnReturnMenu">返回菜单</button>
       </div>
+
+    </div>
+
+    <div id="touchControls" class="hidden">
+      <div class="touch-btn" id="btnSkill">⚡</div>
+      <div class="touch-btn" id="btnBomb">💣</div>
     </div>
   </div>
 
